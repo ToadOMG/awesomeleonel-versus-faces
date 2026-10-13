@@ -121,7 +121,9 @@ inline bool faceMatches(int selected, int levelFace) {
 // POST JSON al servidor de salas. cb(ok, json) se ejecuta en el hilo principal.
 template <class F>
 void post(std::string const& path, matjson::Value body, F cb) {
-	auto url = Mod::get()->getSettingValue<std::string>("server-url") + path;
+	auto base = Mod::get()->getSettingValue<std::string>("server-url");
+	while (!base.empty() && (base.back() == '/' || base.back() == ' ')) base.pop_back();
+	auto url = base + path;
 	async::spawn(
 		web::WebRequest().bodyJSON(body).post(url),
 		[cb = std::move(cb)](web::WebResponse res) mutable {

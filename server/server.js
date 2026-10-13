@@ -10,9 +10,10 @@ http.createServer((req, res) => {
 	let body = '';
 	req.on('data', d => body += d);
 	req.on('end', () => {
+		const path = req.url.split('?')[0].replace(/\/{2,}/g, '/');
 		let j = {};
 		try { j = JSON.parse(body || '{}'); } catch {}
-		if (req.url === '/create') {
+		if (path === '/create') {
 			let c; do c = genCode(); while (rooms.has(c));
 			rooms.set(c, { levelID: j.levelID | 0, mainLevel: !!j.mainLevel, face: j.face | 0,
 				players: { p1: { pct: 0, done: false, ...cos(j) } }, ready: false, t: Date.now() });
@@ -20,7 +21,7 @@ http.createServer((req, res) => {
 		}
 		const room = rooms.get(String(j.room || '').toUpperCase());
 		if (!room) return send(res, { error: 'sala no existe' }, 404);
-		if (req.url === '/join') {
+		if (path === '/join') {
 			if (room.players.p2) return send(res, { error: 'sala llena' }, 409);
 			room.players.p2 = { pct: 0, done: false, ...cos(j) };
 			room.ready = true;
@@ -28,11 +29,11 @@ http.createServer((req, res) => {
 			return send(res, { playerId: 'p2', levelID: room.levelID, mainLevel: room.mainLevel, face: room.face,
 				opp: { icon: h.icon, c1: h.c1, c2: h.c2 } });
 		}
-		if (req.url === '/status') {
+		if (path === '/status') {
 			const g = room.players.p2;
 			return send(res, { ready: room.ready, opp: g ? { icon: g.icon, c1: g.c1, c2: g.c2 } : null });
 		}
-		if (req.url === '/progress') {
+		if (path === '/progress') {
 			const me = room.players[j.playerId];
 			if (!me) return send(res, { error: 'jugador' }, 400);
 			me.pct = +j.pct || 0;
