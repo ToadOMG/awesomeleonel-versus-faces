@@ -6,7 +6,7 @@
 		"mac": "2.2081",
 		"ios": "2.2081"
 	},
-	"version": "v1.2.0",
+	"version": "v1.2.1",
 	"id": "awesomeleonel.versus-faces",
 	"name": "Versus Faces",
 	"developer": "AwesomeLeonel",
@@ -16,7 +16,8 @@
 			"type": "string",
 			"name": "Servidor multijugador",
 			"description": "URL del servidor de salas (ver carpeta server/).",
-			"default": "http://localhost:3000"
+			"default": "https://versus-server-46ra.onrender.com",
+			"filter": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/._-"
 		},
 		"bot-skill": {
 			"type": "float",
@@ -25,7 +26,9 @@
 			"default": 1.0,
 			"min": 0.3,
 			"max": 2.0,
-			"control": { "slider": true }
+			"control": {
+				"slider": true
+			}
 		}
 	}
 }
