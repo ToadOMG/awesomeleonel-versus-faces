@@ -1,0 +1,31 @@
+{
+	"geode": "5.9.0",
+	"gd": {
+		"win": "2.2081",
+		"android": "2.2081",
+		"mac": "2.2081",
+		"ios": "2.2081"
+	},
+	"version": "v1.0.0",
+	"id": "awesomeleonel.versus-faces",
+	"name": "Versus Faces",
+	"developer": "AwesomeLeonel",
+	"description": "Modo versus con caras de dificultad: carrera contra un bot (offline) o contra otro jugador (sala online), con niveles aleatorios del juego u online.",
+	"settings": {
+		"server-url": {
+			"type": "string",
+			"name": "Servidor multijugador",
+			"description": "URL del servidor de salas (ver carpeta server/).",
+			"default": "http://localhost:3000"
+		},
+		"bot-skill": {
+			"type": "float",
+			"name": "Habilidad del bot",
+			"description": "Mayor = el bot es mas rapido y falla menos.",
+			"default": 1.0,
+			"min": 0.3,
+			"max": 2.0,
+			"control": { "slider": true }
+		}
+	}
+}
