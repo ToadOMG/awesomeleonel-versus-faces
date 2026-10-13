@@ -15,6 +15,10 @@ protected:
 	CCLabelBMFont* m_iconLabel = nullptr;
 	SimplePlayer* m_bot = nullptr;
 	TextInput* m_code = nullptr;
+	Ref<GJGameLevel> m_level;
+	int m_songID = 0;
+	int m_songStage = 0;
+	float m_songWait = 0.f;
 
 	bool init() override;
 	~VersusLayer() override;
@@ -39,6 +43,8 @@ protected:
 	void afterPick();
 	void pollRoom(float);
 	void play(GJGameLevel* lvl);
+	void pollSong(float dt);
+	void launch(GJGameLevel* lvl);
 
 public:
 	static VersusLayer* create();

@@ -37,8 +37,12 @@ http.createServer((req, res) => {
 			if (!me) return send(res, { error: 'jugador' }, 400);
 			me.pct = +j.pct || 0;
 			me.done = me.done || !!j.done;
-			const other = room.players[j.playerId === 'p1' ? 'p2' : 'p1'] || { pct: 0, done: false };
-			return send(res, { opponentPct: other.pct, opponentDone: other.done });
+			me.quit = me.quit || !!j.quit;
+			me.deaths = j.deaths | 0;
+			me.best = Math.max(me.best || 0, +j.best || 0, me.pct);
+			const o = room.players[j.playerId === 'p1' ? 'p2' : 'p1'] || {};
+			return send(res, { opponentPct: o.pct || 0, opponentDone: !!o.done, opponentQuit: !!o.quit,
+				opponentDeaths: o.deaths | 0, opponentBest: o.best || 0 });
 		}
 		send(res, { error: 'ruta' }, 404);
 	});

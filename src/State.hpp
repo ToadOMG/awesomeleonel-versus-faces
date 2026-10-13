@@ -26,9 +26,24 @@ struct Match {
 	Cosmetic opp;            // icono y colores del rival
 	float opponentPct = 0.f;
 	bool opponentDone = false;
+	bool opponentQuit = false;
+	int myDeaths = 0;        // intentos fallidos tuyos
+	int oppDeaths = 0;       // intentos fallidos del rival
+	float myBest = 0.f;      // tu mejor porcentaje
+	float oppBest = 0.f;     // mejor porcentaje del rival
 	bool over = false;
 	bool inFlight = false;
 };
+
+// Si tras estos intentos fallidos nadie llega a la meta, gana quien tenga mas porcentaje
+constexpr int kMaxDeaths = 30;
+
+// Convierte SeedValueRSV o int a int, segun la version del juego
+template <class T>
+int toInt(T const& v) {
+	if constexpr (requires { v.value(); }) return (int)v.value();
+	else return (int)v;
+}
 
 inline Match& match() { static Match m; return m; }
 
@@ -76,7 +91,7 @@ inline char const* faceName(int f) {
 
 // Estrellas -> cara (niveles online calificados)
 inline int faceOfStars(int s) {
-	if (s <= 0) return 0;
+	if (s <= 1) return 0; // sin calificar o Auto: se descarta
 	if (s <= 2) return 1;
 	if (s == 3) return 2;
 	if (s <= 5) return 3;
@@ -85,9 +100,14 @@ inline int faceOfStars(int s) {
 	return 6;
 }
 
-// Niveles oficiales 1..22 -> cara (aproximado, ajustalo a tu gusto)
+// Niveles oficiales (orden real del juego) -> cara. 0 = no se usa al filtrar por cara
+// 1 Stereo Madness, 2 Back on Track, 3 Polargeist, 4 Dry Out, 5 Base After Base,
+// 6 Can't Let Go, 7 Jumper, 8 Time Machine, 9 Cycles, 10 xStep, 11 Clutterfunk,
+// 12 Theory of Everything, 13 Electroman Adventures, 14 Clubstep, 15 Electrodynamix,
+// 16 Hexagon Force, 17 Blast Processing, 18 Theory of Everything 2,
+// 19 Geometrical Dominator, 20 Deadlocked, 21 Fingerdash, 22 Dash
 inline int mainFace(int id) {
-	static int t[22] = {1,2,2,3,3,4,4,4,5,5,5,5,6,5,5,5,5,5,5,5,5,5};
+	static int t[22] = {1,1,2,2,3,3,4,4,4,5,5,5,5,6,0,0,0,6,0,0,0,0};
 	return t[std::clamp(id, 1, 22) - 1];
 }
 
@@ -111,6 +131,30 @@ void post(std::string const& path, matjson::Value body, F cb) {
 			cb(true, j.unwrap());
 		}
 	);
+}
+
+// Envia tu progreso al servidor y guarda lo que responde sobre el rival
+inline void sendProgress(float pct, bool done, bool quit) {
+	auto& m = match();
+	matjson::Value b;
+	b["room"] = m.room;
+	b["playerId"] = m.playerId;
+	b["pct"] = (double)pct;
+	b["done"] = done;
+	b["quit"] = quit;
+	b["deaths"] = m.myDeaths;
+	b["best"] = (double)m.myBest;
+	m.inFlight = true;
+	post("/progress", b, [](bool ok, matjson::Value const& v) {
+		auto& m = match();
+		m.inFlight = false;
+		if (!ok) return;
+		m.opponentPct = (float)v["opponentPct"].asDouble().unwrapOr(0.0);
+		m.opponentDone = v["opponentDone"].asBool().unwrapOr(false);
+		m.opponentQuit = v["opponentQuit"].asBool().unwrapOr(false);
+		m.oppDeaths = (int)v["opponentDeaths"].asInt().unwrapOr(0);
+		m.oppBest = std::max(m.oppBest, (float)v["opponentBest"].asDouble().unwrapOr(0.0));
+	});
 }
 
 inline Cosmetic parseCosmetic(matjson::Value const& v) {

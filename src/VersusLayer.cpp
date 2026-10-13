@@ -361,13 +361,50 @@ void VersusLayer::startLevel() {
 	glm->downloadLevel(m.levelID, false, 0);
 }
 
+// Antes de jugar se asegura de que la cancion del nivel este descargada
 void VersusLayer::play(GJGameLevel* lvl) {
 	if (!lvl) return this->fail("Nivel no disponible");
 	auto glm = GameLevelManager::get();
 	if (glm->m_levelDownloadDelegate == this) glm->m_levelDownloadDelegate = nullptr;
+
+	int song = vs::toInt(lvl->m_songID);
+	auto mdm = MusicDownloadManager::sharedState();
+	if (song > 0 && !mdm->isSongDownloaded(song)) {
+		m_level = lvl;
+		m_songID = song;
+		m_songStage = 0;
+		m_songWait = 0.f;
+		this->setStatus("Descargando cancion...");
+		mdm->getSongInfo(song, true);
+		this->schedule(schedule_selector(VersusLayer::pollSong), .5f);
+		return;
+	}
+	this->launch(lvl);
+}
+
+void VersusLayer::pollSong(float dt) {
+	auto mdm = MusicDownloadManager::sharedState();
+	m_songWait += dt;
+	if (mdm->isSongDownloaded(m_songID)) {
+		this->unschedule(schedule_selector(VersusLayer::pollSong));
+		return this->launch(m_level);
+	}
+	if (m_songWait > 60.f) return this->fail("No se pudo descargar la cancion");
+	if (m_songStage == 0 && mdm->getSongInfoObject(m_songID)) {
+		m_songStage = 1;
+		mdm->downloadSong(m_songID);
+	}
+}
+
+void VersusLayer::launch(GJGameLevel* lvl) {
 	auto& m = vs::match();
 	m.over = false;
 	m.opponentPct = 0.f;
 	m.opponentDone = false;
+	m.opponentQuit = false;
+	m.myDeaths = 0;
+	m.oppDeaths = 0;
+	m.myBest = 0.f;
+	m.oppBest = 0.f;
 	CCDirector::get()->replaceScene(CCTransitionFade::create(.5f, PlayLayer::scene(lvl, false, false)));
 }
