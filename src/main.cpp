@@ -8,7 +8,7 @@ class $modify(VsMenu, MenuLayer) {
 	bool init() {
 		if (!MenuLayer::init()) return false;
 		auto spr = CircleButtonSprite::createWithSpriteFrameName(
-			"diffIcon_05_btn_001.png", 1.f, CircleBaseColor::Green, CircleBaseSize::MediumAlt);
+			"diffIcon_06_btn_001.png", 1.f, CircleBaseColor::Green, CircleBaseSize::MediumAlt);
 		auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(VsMenu::onVersus));
 		btn->setID("versus-button"_spr);
 		if (auto menu = this->getChildByID("bottom-menu")) {
@@ -25,7 +25,7 @@ class $modify(VsMenu, MenuLayer) {
 // ---------- Carrera dentro del nivel ----------
 class $modify(VsPlayLayer, PlayLayer) {
 	struct Fields {
-		CCSprite* face = nullptr;
+		SimplePlayer* icon = nullptr;
 		float botTotal = 0.f;
 		float sendT = 0.f;
 	};
@@ -40,13 +40,32 @@ class $modify(VsPlayLayer, PlayLayer) {
 		bar->setPosition({win.width / 2 - 100.f, win.height - 38.f});
 		m_uiLayer->addChild(bar, 50);
 
-		auto face = CCSprite::createWithSpriteFrameName(vs::faceFrame(m.face).c_str());
-		face->setScale(.4f);
-		face->setPosition({0.f, 3.f});
-		bar->addChild(face);
-		m_fields->face = face;
+		// icono del rival sobre la barra
+		auto g = GameManager::get();
+		auto icon = SimplePlayer::create(m.opp.icon);
+		icon->setColor(g->colorForIdx(m.opp.c1));
+		icon->setSecondColor(g->colorForIdx(m.opp.c2));
+		icon->setScale(.4f);
+		icon->setPosition({0.f, 9.f});
+		bar->addChild(icon);
+		m_fields->icon = icon;
 		return true;
 	}
+
+	// Cartel de resultado y salida del nivel
+	void endRace(bool won) {
+		auto win = CCDirector::get()->getWinSize();
+		auto lbl = CCLabelBMFont::create(won ? "VICTORIA" : "DERROTA", "goldFont.fnt");
+		lbl->setPosition({win.width / 2, win.height / 2 + 40.f});
+		lbl->setScale(1.2f);
+		if (auto sc = CCDirector::get()->getRunningScene()) sc->addChild(lbl, 9999);
+		this->runAction(CCSequence::create(
+			CCDelayTime::create(2.2f),
+			CCCallFunc::create(this, callfunc_selector(VsPlayLayer::exitRace)),
+			nullptr));
+	}
+
+	void exitRace() { this->onQuit(); }
 
 	void postUpdate(float dt) {
 		PlayLayer::postUpdate(dt);
@@ -63,7 +82,7 @@ class $modify(VsPlayLayer, PlayLayer) {
 			float skill = (float)Mod::get()->getSettingValue<double>("bot-skill");
 			m.opponentPct += dt / (f->botTotal / skill) * 100.f;
 			// el bot "muere" mas a menudo en caras mas dificiles
-			int fc = m.face == 0 ? 3 : m.face;
+			int fc = std::clamp(m.face, 1, 6);
 			float p = 0.004f * fc * fc / skill;
 			if (std::uniform_real_distribution<float>(0.f, 1.f)(rng) < p * dt) m.opponentPct = 0.f;
 		} else {
@@ -86,12 +105,12 @@ class $modify(VsPlayLayer, PlayLayer) {
 			}
 		}
 
-		if (f->face) f->face->setPositionX(std::min(m.opponentPct, 100.f) * 2.f);
+		if (f->icon) f->icon->setPositionX(std::min(m.opponentPct, 100.f) * 2.f);
 
+		// Llego el rival: pierdes y sales del nivel
 		if (m.opponentPct >= 100.f || m.opponentDone) {
 			m.over = true;
-			FLAlertLayer::create("Perdiste", "El rival llego primero a la meta.", "OK")->show();
-			this->pauseGame(false);
+			this->endRace(false);
 		}
 	}
 
@@ -108,7 +127,8 @@ class $modify(VsPlayLayer, PlayLayer) {
 			b["done"] = true;
 			vs::post("/progress", b, [](bool, matjson::Value const&) {});
 		}
-		FLAlertLayer::create("Victoria", "Llegaste primero a la meta.", "OK")->show();
+		// Llegaste tu: ganas y sales del nivel
+		this->endRace(true);
 	}
 
 	void onQuit() {

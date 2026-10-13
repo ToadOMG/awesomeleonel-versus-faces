@@ -3,6 +3,7 @@ const http = require('http');
 const rooms = new Map();
 const genCode = () => [...Array(4)].map(() => String.fromCharCode(65 + (Math.random() * 26 | 0))).join('');
 const send = (res, o, c = 200) => { res.writeHead(c, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)); };
+const cos = j => ({ icon: j.icon | 0 || 1, c1: j.c1 | 0, c2: j.c2 | 0 });
 
 http.createServer((req, res) => {
 	if (req.method !== 'POST') return send(res, { error: 'POST only' }, 405);
@@ -14,18 +15,23 @@ http.createServer((req, res) => {
 		if (req.url === '/create') {
 			let c; do c = genCode(); while (rooms.has(c));
 			rooms.set(c, { levelID: j.levelID | 0, mainLevel: !!j.mainLevel, face: j.face | 0,
-				players: { p1: { pct: 0, done: false } }, ready: false, t: Date.now() });
+				players: { p1: { pct: 0, done: false, ...cos(j) } }, ready: false, t: Date.now() });
 			return send(res, { room: c, playerId: 'p1' });
 		}
 		const room = rooms.get(String(j.room || '').toUpperCase());
 		if (!room) return send(res, { error: 'sala no existe' }, 404);
 		if (req.url === '/join') {
 			if (room.players.p2) return send(res, { error: 'sala llena' }, 409);
-			room.players.p2 = { pct: 0, done: false };
+			room.players.p2 = { pct: 0, done: false, ...cos(j) };
 			room.ready = true;
-			return send(res, { playerId: 'p2', levelID: room.levelID, mainLevel: room.mainLevel, face: room.face });
+			const h = room.players.p1;
+			return send(res, { playerId: 'p2', levelID: room.levelID, mainLevel: room.mainLevel, face: room.face,
+				opp: { icon: h.icon, c1: h.c1, c2: h.c2 } });
 		}
-		if (req.url === '/status') return send(res, { ready: room.ready });
+		if (req.url === '/status') {
+			const g = room.players.p2;
+			return send(res, { ready: room.ready, opp: g ? { icon: g.icon, c1: g.c1, c2: g.c2 } : null });
+		}
 		if (req.url === '/progress') {
 			const me = room.players[j.playerId];
 			if (!me) return send(res, { error: 'jugador' }, 400);

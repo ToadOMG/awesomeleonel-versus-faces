@@ -12,6 +12,8 @@ protected:
 	std::vector<CCMenuItemSpriteExtra*> m_faceBtns;
 	CCLabelBMFont* m_status = nullptr;
 	CCLabelBMFont* m_faceLabel = nullptr;
+	CCLabelBMFont* m_iconLabel = nullptr;
+	SimplePlayer* m_bot = nullptr;
 	TextInput* m_code = nullptr;
 
 	bool init() override;
@@ -24,8 +26,12 @@ protected:
 	void onBot(CCObject*);
 	void onCreate(CCObject*);
 	void onJoin(CCObject*);
+	void onIcon(CCObject*);
+	void onColor1(CCObject*);
+	void onColor2(CCObject*);
 
 	void refreshFaces();
+	void refreshBot();
 	void setStatus(std::string const& s);
 	void begin(vs::Mode m);
 	void pickLevel();
