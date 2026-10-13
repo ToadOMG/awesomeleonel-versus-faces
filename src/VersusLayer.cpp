@@ -240,7 +240,7 @@ void VersusLayer::pollRoom(float) {
 
 void VersusLayer::onJoin(CCObject*) {
 	if (m_busy) return;
-	auto code = m_code->getString();
+	std::string code = m_code->getString();
 	if (code.size() != 4) return this->setStatus("Escribe el codigo de 4 letras");
 	std::transform(code.begin(), code.end(), code.begin(), ::toupper);
 	m_busy = true;
@@ -274,7 +274,7 @@ void VersusLayer::startLevel() {
 	auto saved = glm->getSavedLevel(m.levelID);
 	if (saved && !saved->m_levelString.empty()) return this->play(saved);
 	glm->m_levelDownloadDelegate = this;
-	glm->downloadLevel(m.levelID, false);
+	glm->downloadLevel(m.levelID, false, 0);
 }
 
 void VersusLayer::play(GJGameLevel* lvl) {
