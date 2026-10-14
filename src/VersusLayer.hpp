@@ -14,7 +14,10 @@ protected:
 	CCLabelBMFont* m_faceLabel = nullptr;
 	CCLabelBMFont* m_iconLabel = nullptr;
 	SimplePlayer* m_bot = nullptr;
-	TextInput* m_code = nullptr;
+	CCMenu* m_mainMenu = nullptr;
+	CCNode* m_pad = nullptr;
+	CCLabelBMFont* m_padLabel = nullptr;
+	std::string m_codeStr;
 	Ref<GJGameLevel> m_level;
 	int m_songID = 0;
 	int m_songStage = 0;
@@ -22,7 +25,7 @@ protected:
 
 	bool init() override;
 	~VersusLayer() override;
-	void keyBackClicked() override { this->onBack(nullptr); }
+	void keyBackClicked() override { if (m_pad) this->closePad(); else this->onBack(nullptr); }
 
 	void onBack(CCObject*);
 	void onFace(CCObject*);
@@ -33,6 +36,12 @@ protected:
 	void onIcon(CCObject*);
 	void onColor1(CCObject*);
 	void onColor2(CCObject*);
+	void onPad(CCObject*);
+	void onClosePad(CCObject*) { this->closePad(); }
+	void openPad();
+	void closePad();
+	void updatePad();
+	void doJoin(std::string const& code);
 
 	void refreshFaces();
 	void refreshBot();

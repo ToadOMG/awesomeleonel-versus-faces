@@ -91,6 +91,7 @@ bool VersusLayer::init() {
 	auto menu = CCMenu::create();
 	menu->setPosition({0, 0});
 	this->addChild(menu);
+	m_mainMenu = menu;
 
 	// Elegir icono del bot
 	for (int d : {-1, 1}) {
@@ -149,13 +150,7 @@ bool VersusLayer::init() {
 	join->setPosition({rx + 70, H - 262});
 	menu->addChild(join);
 
-	m_code = TextInput::create(100.f, "Codigo", "bigFont.fnt");
-	m_code->setFilter("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
-	m_code->setMaxCharCount(4);
-	m_code->setPosition({rx + 70, 22});
-	this->addChild(m_code);
-
-	m_status = mkLabel(this, "", "bigFont.fnt", .35f, {rx - 50, 22});
+	m_status = mkLabel(this, "", "bigFont.fnt", .5f, {rx, 28});
 
 	this->refreshFaces();
 	this->refreshBot();
@@ -320,11 +315,84 @@ void VersusLayer::pollRoom(float) {
 	});
 }
 
-void VersusLayer::onJoin(CCObject*) {
+// ---------- Teclado numerico para el codigo de sala (3 digitos) ----------
+void VersusLayer::onJoin(CCObject*) { this->openPad(); }
+
+void VersusLayer::updatePad() {
+	std::string c = m_codeStr + std::string(3 - m_codeStr.size(), '_');
+	m_padLabel->setString(fmt::format("{} {} {}", c[0], c[1], c[2]).c_str());
+}
+
+void VersusLayer::openPad() {
+	if (m_pad || m_busy) return;
+	m_codeStr.clear();
+	m_mainMenu->setEnabled(false);
+	auto win = CCDirector::get()->getWinSize();
+	float cx = win.width / 2, cy = win.height / 2;
+
+	m_pad = CCNode::create();
+	this->addChild(m_pad, 100);
+	m_pad->addChild(CCLayerColor::create({0, 0, 0, 190}, win.width, win.height));
+
+	auto panel = CCScale9Sprite::create("GJ_square01.png");
+	panel->setContentSize({260.f, 270.f});
+	panel->setPosition({cx, cy});
+	m_pad->addChild(panel);
+
+	mkLabel(m_pad, "Codigo de sala", "goldFont.fnt", .7f, {cx, cy + 108});
+	m_padLabel = mkLabel(m_pad, "", "bigFont.fnt", 1.f, {cx, cy + 72});
+
+	auto pm = CCMenu::create();
+	pm->setPosition({0, 0});
+	m_pad->addChild(pm);
+
+	static char const* names[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
+	for (int i = 0; i < 12; i++) {
+		int row = i / 3, col = i % 3;
+		int tag = i < 9 ? i + 1 : (i == 9 ? 10 : (i == 10 ? 0 : 11));
+		ButtonSprite* spr;
+		if (tag <= 9) spr = ButtonSprite::create(names[tag], 50, true, "bigFont.fnt", "GJ_button_04.png", 30.f, .8f);
+		else if (tag == 10) spr = ButtonSprite::create("Borrar", 58, true, "bigFont.fnt", "GJ_button_06.png", 30.f, .5f);
+		else spr = ButtonSprite::create("Unirse", 58, true, "bigFont.fnt", "GJ_button_01.png", 30.f, .5f);
+		auto b = CCMenuItemSpriteExtra::create(spr, this, menu_selector(VersusLayer::onPad));
+		b->setTag(tag);
+		b->setPosition({cx + (col - 1) * 66.f, cy + 28 - row * 42.f});
+		pm->addChild(b);
+	}
+
+	auto close = CCMenuItemSpriteExtra::create(
+		CCSprite::createWithSpriteFrameName("GJ_closeBtn_001.png"), this, menu_selector(VersusLayer::onClosePad));
+	close->setPosition({cx + 118, cy + 122});
+	pm->addChild(close);
+
+	this->updatePad();
+}
+
+void VersusLayer::closePad() {
+	if (!m_pad) return;
+	m_pad->removeFromParent();
+	m_pad = nullptr;
+	m_padLabel = nullptr;
+	m_mainMenu->setEnabled(true);
+}
+
+void VersusLayer::onPad(CCObject* s) {
+	int tag = static_cast<CCNode*>(s)->getTag();
+	if (tag <= 9) {
+		if (m_codeStr.size() < 3) m_codeStr.push_back((char)('0' + tag));
+	} else if (tag == 10) {
+		if (!m_codeStr.empty()) m_codeStr.pop_back();
+	} else {
+		if (m_codeStr.size() != 3) return;
+		std::string code = m_codeStr;
+		this->closePad();
+		return this->doJoin(code);
+	}
+	this->updatePad();
+}
+
+void VersusLayer::doJoin(std::string const& code) {
 	if (m_busy) return;
-	std::string code = m_code->getString();
-	if (code.size() != 4) return this->setStatus("Escribe el codigo de 4 letras");
-	std::transform(code.begin(), code.end(), code.begin(), ::toupper);
 	m_busy = true;
 	vs::match() = vs::Match{};
 	vs::match().mode = vs::Mode::Online;

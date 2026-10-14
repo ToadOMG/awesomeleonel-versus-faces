@@ -1,7 +1,7 @@
 // Servidor de salas para Versus Faces. Sin dependencias: node server.js
 const http = require('http');
 const rooms = new Map();
-const genCode = () => [...Array(4)].map(() => String.fromCharCode(65 + (Math.random() * 26 | 0))).join('');
+const genCode = () => String(Math.random() * 1000 | 0).padStart(3, '0'); // codigo de 3 digitos
 const send = (res, o, c = 200) => { res.writeHead(c, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)); };
 const cos = j => ({ icon: j.icon | 0 || 1, c1: j.c1 | 0, c2: j.c2 | 0 });
 
